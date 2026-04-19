@@ -1,0 +1,5 @@
+.agents/skills/
+.brain/
+node_modules/
+.env
+ideas/
