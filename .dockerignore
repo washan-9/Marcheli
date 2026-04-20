@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+dist
+.git
+.agents
+.brain
+ideas
+docs
+*.idea.md
+.env
+Dockerfile
+docker-compose.yml
+README.md
+DEVELOPMENT.md

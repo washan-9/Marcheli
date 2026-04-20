@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # Dashboard de Especialistas
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: marcheli-web
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-admin}:${DB_PASSWORD:-password123}@postgres:5432/${DB_NAME:-marcheli_db}?schema=public
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/web/.next
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - marcheli-network
+
+  # Base de datos relacional
+  postgres:
+    image: postgres:15-alpine
+    container_name: marcheli-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-marcheli_db}
+      POSTGRES_USER: ${DB_USER:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password123}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - marcheli-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-admin} -d ${DB_NAME:-marcheli_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Base de datos NoSQL
+  mongodb:
+    image: mongo:6.0
+    container_name: marcheli-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password123}
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - marcheli-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  marcheli-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongodb_data:

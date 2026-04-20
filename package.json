@@ -1,0 +1,23 @@
+{
+  "name": "marcheli",
+  "version": "1.0.0",
+  "description": "Ecosistema de Gestión Clínica y Soporte Emocional",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "prettier": "^3.0.0",
+    "prisma": "^6.1.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.1.0"
+  }
+}
