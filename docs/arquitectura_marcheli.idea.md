@@ -1,76 +1,88 @@
 # Marcheli: Arquitectura de Referencia
 
-**Fecha:** 2026-04-19
-**Estado:** Propuesta / Guía Técnica
-**Etiquetas:** #arquitectura, #clean-architecture, #ddd, #monorepo
+**Fecha:** 2026-04-20
+**Estado:** Propuesta Final / Guía Técnica
+**Etiquetas:** #arquitectura, #clean-architecture, #bff, #orchestrator, #fastapi, #react-native
 
 ## Resumen Arquitectónico
-Marcheli se construirá bajo un enfoque de **Monolito Modular** siguiendo los principios de **Clean Architecture** y **Domain-Driven Design (DDD)**. Esta estructura garantiza que la lógica clínica (el dominio) sea el centro del sistema, aislada de las bases de datos y las interfaces de usuario.
+Marcheli se construye bajo un patrón de **Orquestador Central (BFF - Backend For Frontend)** usando **Next.js**. Esta estructura centraliza la seguridad, la persistencia y la lógica de negocio, delegando tareas pesadas de IA a un microservicio privado en **FastAPI**.
 
 ---
 
-## 1. Diagrama de Sistema
+## 1. Diagrama de Sistema (Patrón Orquestador)
 
 ```mermaid
 graph TD
     subgraph "Frontend Layer (Apps)"
-        Mobile[Mobile App - Estudiante]
-        Web[Web Dashboard - Especialista]
+        Mobile[Mobile App - Paciente\nReact Native]
+        Web[Web Dashboard - Especialista\nReact / Next.js]
     end
 
-    subgraph "API Gateway / BFF"
-        Auth[Auth Service - RBAC/JWT]
+    subgraph "Orchestration Layer (Next.js BFF)"
+        Auth[Auth & RBAC - NextAuth]
+        Signal[Signaling Server - WebRTC]
+        API[Core API & Business Logic]
     end
 
-    subgraph "Modular Core (Domain & Application)"
-        Sentinel[Sentinel Engine - IA/Riesgo]
-        Screening[Screening Engine - Cuestionarios]
-        Clinical[Clinical Management - Triaje/Agenda]
-        Telemed[Telemedicine - WebRTC]
+    subgraph "AI Private Service (FastAPI)"
+        Sentinel[Sentinel Engine - IA/Chatbot]
+        Risk[Risk Detection Models]
     end
 
     subgraph "Infrastructure Layer"
-        Postgres[(PostgreSQL - IAM/Relaciones)]
-        Mongo[(MongoDB - Tests/Cuestionarios)]
+        Postgres[(PostgreSQL - Relational)]
+        Mongo[(MongoDB - Flexible)]
         LLM[OpenAI/Anthropic API]
-        Storage[Encrypted File Storage]
+        Storage[Encrypted Storage]
     end
 
+    %% Conexiones de Apps al Orquestador
     Mobile --> Auth
     Web --> Auth
-    Auth --> Sentinel
-    Auth --> Screening
-    Auth --> Clinical
+    
+    %% Orquestación de Lógica
+    Auth --> API
+    API --> Signal
+    
+    %% Comunicación Interna (Next.js a FastAPI)
+    API <--> Sentinel
     Sentinel --> LLM
-    Screening --> Mongo
-    Clinical --> Postgres
+    Sentinel --> Risk
+
+    %% Persistencia (Solo Next.js toca la DB)
+    API --> Postgres
+    API --> Mongo
 ```
 
 ---
 
-## 2. Capas de la Aplicación (Clean Architecture)
+## 2. Tecnologías y Roles
 
-### A. Domain Layer (Núcleo)
-Contiene las entidades de negocio (Paciente, Especialista, Cuestionario, Alerta) y las reglas clínicas inmutables. No depende de ninguna librería externa.
+### A. Frontend (Apps)
+*   **Web (Especialista):** Construido en **React (Next.js)** para una gestión clínica robusta y SEO optimizado.
+*   **Mobile (Paciente):** Construido en **React Native** para maximizar la reutilización de lógica y tipos con la web, centrado en el Chatbot y Telemedicina.
 
-### B. Application Layer (Casos de Uso)
-Define qué hace la aplicación. Ejemplo: `ProcesarRespuestaCuestionario`, `DetectarRiesgoEnChat`, `AgendarCitaEmergencia`. Coordina la ejecución de las reglas de dominio.
+### B. Orquestador (Next.js)
+Actúa como el único punto de entrada para las apps.
+*   **Seguridad:** Gestiona la autenticación centralizada (NextAuth) y los roles (RBAC).
+*   **Signaling:** Servidor de señales para **WebRTC** (Video-consultas).
+*   **Persistencia:** Es el único componente que interactúa con **Prisma (Postgres)** y **Mongoose (MongoDB)**.
 
-### C. Infrastructure Layer (Implementación)
-Detalles técnicos:
-*   **Persistencia:** Implementaciones de repositorios para PostgreSQL y MongoDB.
-*   **Servicios Externos:** Adaptadores para APIs de IA, servicios de Videollamada y Notificaciones Push.
-*   **Seguridad:** Módulos de cifrado AES-256.
+### C. IA Service (FastAPI)
+Microservicio privado de alto rendimiento.
+*   **Chatbot:** Procesa los mensajes del paciente usando modelos de Python.
+*   **Privacidad:** Solo es accesible por el Orquestador (Next.js), protegiendo la lógica de IA del acceso público.
 
 ---
 
 ## 3. Estrategia de Datos Híbrida
-*   **PostgreSQL:** Datos estructurados y relacionales. Garantiza integridad referencial para la gestión de usuarios y roles (RBAC).
-*   **MongoDB:** Datos semi-estructurados. Ideal para el constructor de cuestionarios dinámicos donde las preguntas y respuestas pueden variar de esquema sin previo aviso.
+*   **PostgreSQL:** Datos estructurales, historial clínico, citas y gestión de usuarios.
+*   **MongoDB:** Constructor de cuestionarios y almacenamiento de logs del Chatbot de IA.
 
-## 4. Comunicación por Eventos
-El sistema utilizará un patrón de **Eventos de Dominio** para la detección proactiva.
-*   *Evento:* `RiskDetectedEvent`
-*   *Acción:* El Dashboard del especialista se actualiza por WebSockets y se envía una notificación push al móvil del especialista asignado.
+## 4. Comunicación y Tiempo Real
+*   **WebRTC:** Telemedicina integrada entre React Native (Paciente) y React (Especialista).
+*   **WebSockets:** Alertas instantáneas de riesgo enviadas desde el Orquestador al Dashboard del especialista cuando el `Sentinel Engine` detecta una anomalía.
 
-@idea: Usar **Prisma** como ORM para PostgreSQL para mantener la seguridad de tipos (Type-Safety) y **Mongoose** para MongoDB para el modelado de esquemas flexibles.
+---
+
+@idea: Mantener el **Monorepo** para el Orquestador y las Apps Web/Mobile para compartir tipos de datos, mientras que el servicio de **FastAPI** puede vivir como un módulo independiente o contenedor separado.
