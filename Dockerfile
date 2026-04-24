@@ -9,6 +9,7 @@ WORKDIR /app
 # Copiar archivos de configuración del monorepo
 COPY package.json package-lock.json* ./
 COPY apps/web/package.json ./apps/web/
+COPY apps/api/package.json ./apps/api/
 COPY packages/database/package.json ./packages/database/
 
 # Instalar dependencias
@@ -33,6 +34,7 @@ ENV NODE_ENV=development
 COPY --from=builder /app ./
 
 EXPOSE 3000
+EXPOSE 3001
 
-# El comando por defecto inicia el modo desarrollo del workspace web
-CMD ["npm", "run", "dev", "--workspace=web"]
+# El comando por defecto sincroniza la base de datos (Prisma) y luego levanta web y api
+CMD ["sh", "-c", "npx prisma db push --schema=packages/database/prisma/schema.prisma --accept-data-loss && npm run dev --workspaces"]

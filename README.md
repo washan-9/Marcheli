@@ -36,20 +36,18 @@ Detalles en el [Roadmap](docs/marcheli_roadmap.idea.md).
 
 ### 1. Configuración Inicial
 *   Clonar el repositorio.
-*   Configurar el entorno: `cp .env.example .env` y rellenar las credenciales (Google OAuth, Secrets).
+*   Configurar los entornos copiando el archivo de ejemplo: `cp .env.example .env` (en la raíz).
+*   Crear un archivo `.env` en `apps/api/.env` con la conexión a MongoDB (`MONGODB_URI`).
 
 ### 2. Iniciar todo el Ecosistema
-Ejecuta el siguiente comando para levantar el Dashboard y las bases de datos:
+Gracias a la contenerización, ya no necesitas instalar dependencias ni sincronizar la base de datos manualmente. Al ejecutar Docker, este se encargará de instalar todo, hacer el `prisma db push` a PostgreSQL, y levantar el Dashboard Web (`apps/web`) y la API Orquestador (`apps/api`) simultáneamente.
+
 ```bash
 docker compose up --build
 ```
-La aplicación estará disponible en [http://localhost:3000](http://localhost:3000).
 
-### 3. Sincronizar Base de Datos (Solo la primera vez)
-Mientras el contenedor está corriendo, prepara las tablas en una nueva terminal:
-```bash
-docker exec -it marcheli-web npx prisma db push --schema=packages/database/prisma/schema.prisma
-```
+- La aplicación Web estará disponible en [http://localhost:3000](http://localhost:3000).
+- La API Orquestador estará disponible en el puerto `3001`.
 
 ---
 

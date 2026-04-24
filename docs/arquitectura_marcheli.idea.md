@@ -5,7 +5,7 @@
 **Etiquetas:** #arquitectura, #clean-architecture, #bff, #orchestrator, #fastapi, #react-native
 
 ## Resumen Arquitectónico
-Marcheli se construye bajo un patrón de **Orquestador Central (BFF - Backend For Frontend)** usando **Next.js**. Esta estructura centraliza la seguridad, la persistencia y la lógica de negocio, delegando tareas pesadas de IA a un microservicio privado en **FastAPI**.
+Marcheli se construye bajo un patrón de **Orquestador Central (BFF - Backend For Frontend)**. A diferencia del diseño original, la API backend está desacoplada del frontend web, resultando en cuatro aplicaciones principales: un frontend web (Next.js), una app móvil (Expo), el API Orquestador (Next.js) que centraliza la seguridad y persistencia, y un microservicio privado de IA en **FastAPI**.
 
 ---
 
@@ -14,17 +14,17 @@ Marcheli se construye bajo un patrón de **Orquestador Central (BFF - Backend Fo
 ```mermaid
 graph TD
     subgraph "Frontend Layer (Apps)"
-        Mobile[Mobile App - Paciente\nReact Native]
-        Web[Web Dashboard - Especialista\nReact / Next.js]
+        Mobile[Mobile App - Paciente\nReact Native / Expo]
+        Web[Web Dashboard - Especialista\nReact / Next.js Frontend Puro]
     end
 
-    subgraph "Orchestration Layer (Next.js BFF)"
+    subgraph "Orchestration Layer (apps/api - Next.js Backend)"
         Auth[Auth & RBAC - NextAuth]
         Signal[Signaling Server - WebRTC]
         API[Core API & Business Logic]
     end
 
-    subgraph "AI Private Service (FastAPI)"
+    subgraph "AI Private Service (apps/sentinel - FastAPI)"
         Sentinel[Sentinel Engine - IA/Chatbot]
         Risk[Risk Detection Models]
     end
@@ -44,12 +44,12 @@ graph TD
     Auth --> API
     API --> Signal
     
-    %% Comunicación Interna (Next.js a FastAPI)
+    %% Comunicación Interna (Backend a FastAPI)
     API <--> Sentinel
     Sentinel --> LLM
     Sentinel --> Risk
 
-    %% Persistencia (Solo Next.js toca la DB)
+    %% Persistencia (Solo el Backend API toca la DB)
     API --> Postgres
     API --> Mongo
 ```
@@ -58,20 +58,31 @@ graph TD
 
 ## 2. Tecnologías y Roles
 
-### A. Frontend (Apps)
-*   **Web (Especialista):** Construido en **React (Next.js)** para una gestión clínica robusta y SEO optimizado.
-*   **Mobile (Paciente):** Construido en **React Native** para maximizar la reutilización de lógica y tipos con la web, centrado en el Chatbot y Telemedicina.
+### A. Frontend Web (`apps/web`)
+*   **Rol:** Web Dashboard (Especialista) para la gestión clínica robusta y SEO optimizado. Construido en **Next.js (React)** actuando como cliente puro que consume a `apps/api`.
+*   **Patrón de Diseño:** **Feature-Sliced Design (FSD)** o Diseño Modular.
+    *   La estructura (`src/features/...`) agrupa componentes, hooks y estado por dominio de negocio (ej. `pacientes`, `citas`) en lugar de tipo de archivo, garantizando la escalabilidad de la UI.
 
-### B. Orquestador (Next.js)
-Actúa como el único punto de entrada para las apps.
-*   **Seguridad:** Gestiona la autenticación centralizada (NextAuth) y los roles (RBAC).
-*   **Signaling:** Servidor de señales para **WebRTC** (Video-consultas).
-*   **Persistencia:** Es el único componente que interactúa con **Prisma (Postgres)** y **Mongoose (MongoDB)**.
+### B. Frontend Mobile (`apps/mobile`)
+*   **Rol:** Mobile App (Paciente) centrada en el Chatbot y Telemedicina. Construido con **React Native y Expo**.
+*   **Patrón de Diseño:** **Model-View-ViewModel (MVVM)** adaptado a React.
+    *   **Model:** Interfaces y gestión de caché (React Query).
+    *   **View:** Componentes presentacionales sin lógica compleja.
+    *   **ViewModel:** Hooks personalizados que consumen el Orquestador (`apps/api`), manteniendo la app móvil muy ligera y delegando carga a la nube.
 
-### C. IA Service (FastAPI)
-Microservicio privado de alto rendimiento.
-*   **Chatbot:** Procesa los mensajes del paciente usando modelos de Python.
-*   **Privacidad:** Solo es accesible por el Orquestador (Next.js), protegiendo la lógica de IA del acceso público.
+### C. Orquestador y Core API (`apps/api`)
+*   **Rol:** Backend For Frontend (BFF) construido como una aplicación **Next.js puramente API**. Es el único punto de entrada para las bases de datos y la seguridad (NextAuth).
+*   **Patrón de Diseño:** **Controller-Service-Repository**.
+    *   **Controllers:** API Routes que reciben peticiones HTTP.
+    *   **Services:** Lógica de negocio (orquestación, autorizaciones).
+    *   **Repository:** Capa de acceso a datos que interactúa con Prisma/MongoDB (importado de `packages/database`).
+
+### D. IA Service / Sentinel (`apps/sentinel`)
+*   **Rol:** Microservicio privado de alto rendimiento construido en **Python (FastAPI)**. Maneja modelos NLP y lógica del chatbot. Solo accesible desde `apps/api`.
+*   **Patrón de Diseño:** **Arquitectura Hexagonal (Ports & Adapters) / Clean Architecture**.
+    *   La lógica dura de IA se aísla en el Core Domain.
+    *   Los endpoints de FastAPI actúan como puertos/adaptadores.
+    *   Garantiza testabilidad y separación total de la capa HTTP de los modelos de riesgo.
 
 ---
 
@@ -85,4 +96,4 @@ Microservicio privado de alto rendimiento.
 
 ---
 
-@idea: Mantener el **Monorepo** para el Orquestador y las Apps Web/Mobile para compartir tipos de datos, mientras que el servicio de **FastAPI** puede vivir como un módulo independiente o contenedor separado.
+@idea: La estructura física del monorepo se refleja en `apps/` con cuatro componentes principales (`web`, `mobile`, `api`, `sentinel`), mientras que los esquemas de bases de datos compartidos residen en `packages/database`.

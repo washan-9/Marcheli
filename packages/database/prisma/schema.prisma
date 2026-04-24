@@ -54,6 +54,12 @@ model User {
   sessions      Session[]
   
   // Perfil clínico (se extenderá más adelante)
+  clinicalProfile ClinicalProfile?
+  assignedStudents ClinicalProfile[] @relation("AssignedSpecialist")
+  appointmentsAsSpecialist Appointment[] @relation("SpecialistAppointments")
+  appointmentsAsStudent    Appointment[] @relation("StudentAppointments")
+  triages                  Triage[]
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -64,4 +70,53 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model ClinicalProfile {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedSpecialistId String?
+  specialist           User?    @relation("AssignedSpecialist", fields: [assignedSpecialistId], references: [id])
+  age                  Int?
+  medicalHistory       String?  @db.Text
+  emergencyContact     String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model Appointment {
+  id            String            @id @default(cuid())
+  studentId     String
+  specialistId  String
+  student       User              @relation("StudentAppointments", fields: [studentId], references: [id])
+  specialist    User              @relation("SpecialistAppointments", fields: [specialistId], references: [id])
+  scheduledAt   DateTime
+  status        AppointmentStatus @default(SCHEDULED)
+  notes         String?           @db.Text
+  meetingLink   String?           // WebRTC URL
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model Triage {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  riskLevel     RiskLevel @default(LOW)
+  notes         String?   @db.Text
+  detectedAt    DateTime  @default(now())
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }

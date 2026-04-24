@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Dashboard de Especialistas
+  # Orquestador y Dashboard (Monorepo Node)
   web:
     build:
       context: .
@@ -9,8 +9,10 @@ services:
     container_name: marcheli-web
     ports:
       - "3000:3000"
+      - "3001:3001"
     environment:
       - DATABASE_URL=postgresql://${DB_USER:-admin}:${DB_PASSWORD:-password123}@postgres:5432/${DB_NAME:-marcheli_db}?schema=public
+      - MONGODB_URI=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-password123}@mongodb:27017/marcheli_nosql?authSource=admin
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
@@ -19,6 +21,7 @@ services:
       - .:/app
       - /app/node_modules
       - /app/apps/web/.next
+      - /app/apps/api/.next
     depends_on:
       postgres:
         condition: service_healthy
