@@ -1,0 +1,13 @@
+{
+  "name": "@marcheli/auth",
+  "version": "1.0.0",
+  "description": "Configuración de autenticación y RBAC compartida (NextAuth + Google, dominio UNMSM)",
+  "main": "index.ts",
+  "type": "module",
+  "license": "ISC",
+  "dependencies": {
+    "@auth/prisma-adapter": "^2.11.2",
+    "@marcheli/database": "*",
+    "next-auth": "^4.24.14"
+  }
+}
