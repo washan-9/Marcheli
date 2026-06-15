@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Paquetes locales del monorepo escritos en TypeScript que Next debe transpilar.
+  transpilePackages: ["@marcheli/auth", "@marcheli/database"],
 };
 
 export default nextConfig;
