@@ -11,6 +11,7 @@ COPY package.json package-lock.json* ./
 COPY apps/web/package.json ./apps/web/
 COPY apps/api/package.json ./apps/api/
 COPY packages/database/package.json ./packages/database/
+COPY packages/auth/package.json ./packages/auth/
 
 # Instalar dependencias
 RUN npm install
@@ -37,4 +38,4 @@ EXPOSE 3000
 EXPOSE 3001
 
 # El comando por defecto sincroniza la base de datos (Prisma) y luego levanta web y api
-CMD ["sh", "-c", "npx prisma db push --schema=packages/database/prisma/schema.prisma --accept-data-loss && npm run dev --workspaces"]
+CMD ["sh", "-c", "npx prisma db push --schema=packages/database/prisma/schema.prisma --accept-data-loss && npm run dev -w apps/api & npm run dev -w apps/web & wait"]
