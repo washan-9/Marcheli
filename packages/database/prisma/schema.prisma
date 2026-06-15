@@ -12,9 +12,13 @@ datasource db {
 
 enum Role {
   ADMIN
-  SPECIALIST
-  STUDENT
+  SPECIALIST // Psicólogo
+  STUDENT    // Estudiante
 }
+
+// ---------------------------------------------------------------------------
+// Autenticación (NextAuth) — gestionada vía @marcheli/auth
+// ---------------------------------------------------------------------------
 
 model Account {
   id                String  @id @default(cuid())
@@ -52,16 +56,27 @@ model User {
   role          Role      @default(STUDENT)
   accounts      Account[]
   sessions      Session[]
-  
-  // Perfil clínico (se extenderá más adelante)
-  clinicalProfile ClinicalProfile?
-  assignedStudents ClinicalProfile[] @relation("AssignedSpecialist")
+
+  // Perfil del estudiante y asignación de psicólogo
+  studentProfile   StudentProfile?
+  assignedStudents StudentProfile[] @relation("AssignedSpecialist")
+
+  // Citas (telemedicina)
   appointmentsAsSpecialist Appointment[] @relation("SpecialistAppointments")
   appointmentsAsStudent    Appointment[] @relation("StudentAppointments")
-  triages                  Triage[]
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  // Registro de ánimo diario (Pantalla 2)
+  moodLogs MoodLog[]
+
+  // Notas de sesión del psicólogo (panel web)
+  notesAsPsychologist SessionNote[] @relation("PsychologistNotes")
+  notesAsStudent      SessionNote[] @relation("StudentNotes")
+
+  // Alertas de triaje / semáforo de riesgo
+  triages Triage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model VerificationToken {
@@ -72,12 +87,18 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model ClinicalProfile {
+// ---------------------------------------------------------------------------
+// Dominio clínico
+// ---------------------------------------------------------------------------
+
+model StudentProfile {
   id                   String   @id @default(cuid())
   userId               String   @unique
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   assignedSpecialistId String?
   specialist           User?    @relation("AssignedSpecialist", fields: [assignedSpecialistId], references: [id])
+  studentCode          String? // Código de matrícula UNMSM
+  faculty              String? // Facultad / Escuela
   age                  Int?
   medicalHistory       String?  @db.Text
   emergencyContact     String?
@@ -85,18 +106,39 @@ model ClinicalProfile {
   updatedAt            DateTime @updatedAt
 }
 
+// Registro de ánimo diario — 5 niveles, base del gráfico de 7 días y del semáforo
+model MoodLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mood      Mood
+  note      String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+enum Mood {
+  MUY_MAL
+  MAL
+  REGULAR
+  BIEN
+  MUY_BIEN
+}
+
+// Citas / Telemedicina (Pantalla 4)
 model Appointment {
-  id            String            @id @default(cuid())
-  studentId     String
-  specialistId  String
-  student       User              @relation("StudentAppointments", fields: [studentId], references: [id])
-  specialist    User              @relation("SpecialistAppointments", fields: [specialistId], references: [id])
-  scheduledAt   DateTime
-  status        AppointmentStatus @default(SCHEDULED)
-  notes         String?           @db.Text
-  meetingLink   String?           // WebRTC URL
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  id           String            @id @default(cuid())
+  studentId    String
+  specialistId String
+  student      User              @relation("StudentAppointments", fields: [studentId], references: [id])
+  specialist   User              @relation("SpecialistAppointments", fields: [specialistId], references: [id])
+  scheduledAt  DateTime
+  status       AppointmentStatus @default(SCHEDULED)
+  notes        String?           @db.Text
+  meetingLink  String? // URL WebRTC
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 }
 
 enum AppointmentStatus {
@@ -105,13 +147,32 @@ enum AppointmentStatus {
   CANCELLED
 }
 
+// Notas privadas de sesión escritas por el psicólogo (panel web)
+model SessionNote {
+  id             String   @id @default(cuid())
+  studentId      String
+  psychologistId String
+  appointmentId  String?
+  student        User     @relation("StudentNotes", fields: [studentId], references: [id])
+  psychologist   User     @relation("PsychologistNotes", fields: [psychologistId], references: [id])
+  content        String   @db.Text
+  createdAt      DateTime @default(now())
+
+  @@index([studentId])
+}
+
+// Alerta de triaje / semáforo — generada por chat, ánimo, encuesta o manual
 model Triage {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id])
-  riskLevel     RiskLevel @default(LOW)
-  notes         String?   @db.Text
-  detectedAt    DateTime  @default(now())
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id])
+  riskLevel    RiskLevel    @default(LOW)
+  source       TriageSource @default(MANUAL)
+  acknowledged Boolean      @default(false)
+  notes        String?      @db.Text
+  detectedAt   DateTime     @default(now())
+
+  @@index([userId])
 }
 
 enum RiskLevel {
@@ -119,4 +180,11 @@ enum RiskLevel {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+enum TriageSource {
+  CHAT
+  MOOD
+  QUESTIONNAIRE
+  MANUAL
 }
