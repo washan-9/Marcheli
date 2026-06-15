@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "MindCare UNMSM",
+    "slug": "mindcare-unmsm",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "mindcare",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": { "supportsTablet": true },
+    "android": {}
+  }
+}
