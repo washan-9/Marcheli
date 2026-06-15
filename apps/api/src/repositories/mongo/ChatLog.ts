@@ -11,6 +11,7 @@ export interface IChatLog extends Document {
     flags?: string[]; // Banderas de riesgo detectadas (ej. "ANSIEDAD", "CRISIS")
   }[];
   overallRiskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  summary?: string; // Resumen del chat generado por Sentinel para el panel del psicólogo
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,11 +28,12 @@ const ChatLogSchema: Schema = new Schema({
       flags: [{ type: String }],
     }
   ],
-  overallRiskLevel: { 
-    type: String, 
-    enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], 
-    default: 'LOW' 
-  }
+  overallRiskLevel: {
+    type: String,
+    enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
+    default: 'LOW'
+  },
+  summary: { type: String }
 }, { timestamps: true });
 
 export default mongoose.models.ChatLog || mongoose.model<IChatLog>('ChatLog', ChatLogSchema);
