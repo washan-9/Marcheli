@@ -1,0 +1,9 @@
+[project]
+name = "sentinel"
+version = "0.1.0"
+description = "Sentinel Engine — servicio de IA (chatbot, detección de crisis) de MindCare UNMSM"
+requires-python = ">=3.11"
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
