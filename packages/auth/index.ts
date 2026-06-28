@@ -44,6 +44,21 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      // Redirigir por defecto al dashboard del estudiante si no hay un destino específico
+      if (url === baseUrl || url === `${baseUrl}/`) {
+        return `${baseUrl}/dashboard/student`;
+      }
+      // Permitir URLs relativas dentro del mismo sitio
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      // Permitir URLs del mismo origen
+      if (new URL(url).origin === baseUrl) {
+        return url;
+      }
+      return `${baseUrl}/dashboard/student`;
+    },
   },
 };
 

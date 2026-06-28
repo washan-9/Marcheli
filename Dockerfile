@@ -1,33 +1,25 @@
-FROM node:20-alpine AS base
+FROM --platform=linux/amd64 node:20-slim AS builder
 
-# 1. Instalar dependencias solo cuando sea necesario
-FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copiar archivos de configuración del monorepo
-COPY package.json package-lock.json* ./
-COPY apps/web/package.json ./apps/web/
-COPY apps/api/package.json ./apps/api/
-COPY packages/database/package.json ./packages/database/
-COPY packages/auth/package.json ./packages/auth/
+# Instalar openssl, que es necesario para Prisma en Debian/Ubuntu
+RUN apt-get update && apt-get install -y openssl
+
+# Copiar todo el código
+COPY . .
 
 # Instalar dependencias
 RUN npm install
 
-# 2. Reconstruir el código fuente solo cuando sea necesario
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
 # Generar el cliente de Prisma dentro del contenedor
 RUN npx prisma generate --schema=packages/database/prisma/schema.prisma
 
-# 3. Imagen de desarrollo
-FROM base AS runner
+# Imagen de desarrollo
+FROM --platform=linux/amd64 node:20-slim AS runner
 WORKDIR /app
+
+# Instalar openssl para el entorno de runtime también
+RUN apt-get update && apt-get install -y openssl
 
 ENV NODE_ENV=development
 
